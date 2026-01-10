@@ -5,7 +5,7 @@ DB_FILE = "snutz.db"
 
 def get_connection():
     """ Opens connection to DB """
-    print("Connecting do db...")
+    print("Connecting to db...")
     connection = sqlite3.connect(DB_FILE)
     connection.row_factory = sqlite3.Row
     return connection
@@ -31,8 +31,59 @@ def init_database():
     conn.close()
     print("Database Initialized")
     
+def register_device(device_id: str, name: str):
+    """ Add a new device to the database """
+    conn = get_connection()
+    cursor = conn.cursor()
     
+    now = datetime.now().isoformat()
+    
+    cursor.execute("""
+        INSERT OR REPLACE INTO devices
+        (device_id, name, status, last_seen, registered_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (device_id, name, "online", now, now))
+    
+    conn.commit()
+    conn.close()
+    
+    return{
+        "device_id": device_id,
+        "name": "name",
+        "status": "online",
+        "registered_at": now
+    }
+    
+def get_all_devices():
+    """ Gets all devices from the database """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM devices")
+    rows = cursor.fetchall()
+    
+    devices = []
+    for row in rows:
+        devices.append(dict(row))
+    
+    conn.close()
+    return devices
+   
 #Test code
 if __name__ == "__main__":
     print("Testing DB..")
     init_database()
+    
+    # Test adding device
+    print("\nRegistering a device...")
+    result = register_device("test-1", "Test Device")
+    print(f"Result: {result}")
+    
+    # Test getting all devices
+    print("\nGetting all devices..")
+    devices = get_all_devices()
+    print(f"Found{len(devices)} device(s):")
+    for device in devices:
+        print(f" = {device}")
+        
+    print("\n Tests Done!")
