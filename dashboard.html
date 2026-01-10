@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sNutz - Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <h1>sNutz Network Monitor</h1>
+    <p>Welcome to your network monitoring dashboard!</p>
+
+    <div class="card" id="registeredDevices">
+        <h2>Registered Devices</h2>
+        <table>
+            <tr>
+                <th>Device ID</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Last Seen</th>
+            </tr>
+            <tr>
+                <td>test-1</td>
+                <td>Test Device</td>
+                <td class="status-online">Online</td>
+                <td>5 seconds ago</td>
+            </tr>
+            <tr>
+                <td>test-2</td>
+                <td>device 2</td>
+                <td class="status-offline">Offline</td>
+                <td>10 minutes ago</td>
+            </tr>
+        </table>
+    </div>
+    <div class="card">
+        <h2>🎮 Run Command</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px;">
+            <div>
+                <label>Device</label><br>
+                <select id="device-select" style="width: 100%; padding: 8px;">
+                    <option value="">Select device...</option>
+                    <option value="test-1">test-1 (Test Device)</option>
+                    <option value="test-2">test-2 (Office Pi)</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Test Type</label><br>
+                <select id="test-type" style="width: 100%; padding: 8px;">
+                    <option value="ping">Ping</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Target</label><br>
+                <input type="text" id="target" placeholder="google.com" style="width: 100%; padding: 8px;" value="google.com">
+            </div>
+            
+            <div>
+                <label>&nbsp;</label><br>
+                <button 
+                    onclick="runCommand()"
+                    style="padding: 8px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                    ▶ Run Test
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

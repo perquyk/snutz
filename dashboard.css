@@ -1,0 +1,43 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    padding: 20px;
+}
+h1 {
+    color: #333;
+}
+.card {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.card h2 {
+    color: #555;
+    margin-top: 0;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    background-color: #f8f8f8;
+    font-weight: bold;
+}
+tr:hover{
+    background-color: #f0f0f0;
+}
+.status-online{
+    color: green;
+    font-weight: bold;
+}
+.status-offline{
+    color: red;
+    font-weight: bold;
+}
