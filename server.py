@@ -42,3 +42,27 @@ def hearbeat(device_id: str):
         "device_id": device_id,
         "last_seen": result["last_seen"]
     }
+    
+@app.post("/tests/results")
+def submit_test_result(device_id: str, test_type: str, target: str, result_data: str, triggered_by: str = "manual"):
+    """ Receives test result from agent """
+    result = database.save_test_result(
+        device_id,
+        test_type,
+        target,
+        result_data,
+        triggered_by
+    )
+    return{
+        "message": "Test result saved",
+        "result": result
+    }
+    
+@app.get("/tests/results")
+def get_test_resulst(device_id: str = None, limit: int = 50):
+    """Gets test results (optional filter by deviceId) """
+    results = database.get_test_results(device_id, limit)
+    return {
+        "count": len(results),
+        "results": results
+    }

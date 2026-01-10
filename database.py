@@ -16,6 +16,7 @@ def init_database():
     conn = get_connection()
     cursor = conn.cursor()
     
+    # DEVICES TABLE
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS devices (
             device_id TEXT PRIMARY KEY,
@@ -25,6 +26,36 @@ def init_database():
             registered_at TEXT NOT NULL        
             
         )
+    """)
+    
+    # TEST RESULT TABLE
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS test_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            test_type TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            target TEXT,
+            result_data TEXT,
+            triggered_by TEXT DEFAULT 'manual',
+            FOREIGN KEY (device_id) REFERENCES devices (device_id)
+        )
+    """)
+    
+    # COMMANDS TABLE    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            command_type TEXT NOT NULL,
+            parameters TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            completed_at TEXT NOT NULL,
+            result_id INTEGER,
+            FOREIGN KEY (device_id) REFERENCES devices (device_id),
+            FOREIGN KEY (result_id) REFERENCES test_results (id)
+        )               
     """)
     
     conn.commit()
@@ -92,8 +123,152 @@ def update_heartbeat(device_id: str):
     
     return {"last_seen": now, "status": "online"}
         
+def save_test_result(device_id: str, test_type: str, target: str, result_data: str, triggered_by: str = "manual"):
+    conn = get_connection()
+    cursor = conn.cursor()
     
-#Test code
+    now = datetime.now().isoformat()
+    
+    cursor.execute("""
+        INSERT INTO test_results
+        (device_id, test_type, timestamp, target, result_data, triggered_by) 
+        VALUES (?, ?, ?, ?, ?, ?)               
+    """, (device_id, test_type, now, target, result_data, triggered_by))
+    
+    result_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+            
+    return {
+        "id": result_id,
+        "device_id": device_id,
+        "test_type": test_type,
+        "timestamp": now,
+        "target": target,
+        "result_data": result_data
+    } 
+    
+def get_test_results(device_id: str = None, limit: int = 50):
+    """ Gets the test results from the db """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if device_id:
+        #get results for a specific device
+        cursor.execute("""
+            SELECT * FROM test_results
+            WHERE device_id =  ?
+            ORDER BY timestamp DESC
+            LIMIT ?               
+        """, (device_id, limit))
+    else:
+        #get results for ALL devices
+        cursor.execute("""
+            SELECT * FROM test_results
+            ORDER BY timestamp DESC
+            LIMIT ?               
+        """, (limit,))
+    
+    rows = cursor.fetchall()
+    results = [dict(row) for row in rows]
+    
+    conn.close()
+    return results
+    
+def create_command(device_id: str, command_type: str, parameters: str = None):
+    """ Creates a new command for a device """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+         
+    cursor.execute("""
+        INSERT INTO commands
+        (device_id, command_type, parameters, status, created_at)
+        VALUES (?, ?, ?, 'pending', ?)
+    """, (device_id, command_type, parameters, now))
+    
+    command_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return{
+        "id": command_id,
+        "device_id": device_id,
+        "command_type": command_type,
+        "parameters": parameters,
+        "status": 'pending',
+        "created_at": now
+    }
+
+def get_pending_commands(device_id: str):
+    """ Gets all pending commands for a device """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM commands
+        WHERE device_id = ? AND status = 'pending'
+        ORDER BY created_at ASC
+    """, (device_id,))
+    
+    rows = cursor.fetchall()
+    commands = [dict(row) for row in rows]
+    
+    conn.close()
+    return commands
+
+def update_command_status(command_id: int, status: str, result_id: int = None):
+    """ Updates a command's status """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    
+    if status == "completed":
+        cursor.execute("""
+            UPDATE commands
+            SET status = ?, completed_at = ?, result_id = ?
+            WHERE id = ?               
+        """, (status, now, result_id, command_id))
+    else:
+        cursor.execute("""
+            UPDATE commands
+            SET status = ?
+            WHERE id = ?    
+        """, (status, command_id))
+
+    conn.commit()
+    conn.close()
+    
+    return {"id": command_id, "status": status}
+         
+def get_all_commands(device_id: str = None, limit: int = 50):
+    """ Gets command s(optionally filtered by device)"""         
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if device_id:
+        cursor.execute("""
+            SELECT * FROM commands
+            WHERE device_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (device_id, limit))
+    else:
+        cursor.execute("""
+            SELECT * FROM commands
+            ORDER BY create_at DESC
+            LIMIT ?
+        """, (limit,))
+        
+    rows = cursor.fetchall()
+    commands = [dict(row) for row in rows]
+    
+    conn.close()
+    return commands
+         
+# TEST CODE
 if __name__ == "__main__":
     print("Testing DB..")
     init_database()
