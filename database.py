@@ -5,12 +5,14 @@ DB_FILE = "snutz.db"
 
 def get_connection():
     """ Opens connection to DB """
+    print("Connecting do db...")
     connection = sqlite3.connect(DB_FILE)
     connection.row_factory = sqlite3.Row
     return connection
 
 def init_database():
     """ Creates the database tables if they don't exist """
+    print("initializing database...")
     conn = get_connection()
     cursor = conn.cursor()
     
