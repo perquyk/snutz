@@ -32,7 +32,7 @@ def init_database():
     print("Database Initialized")
     
     
-    
-    if __name__ == "__main__":
-        print("Testing DB..")
-        init_database()
+#Test code
+if __name__ == "__main__":
+    print("Testing DB..")
+    init_database()
