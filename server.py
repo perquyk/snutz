@@ -66,3 +66,46 @@ def get_test_resulst(device_id: str = None, limit: int = 50):
         "count": len(results),
         "results": results
     }
+    
+@app.post("/commands/create")
+def create_command(device_id: str, command_type: str, parameters: str = None):
+    """ Creates a command for a device to execute """
+    
+    # Check if device exists
+    device = database.get_device(device_id)
+    if not device:
+        return {"error": "Device not found"}, 404
+    
+    command = database.create_command(device_id, command_type, parameters)
+    
+    return {
+        "message": "Command created",
+        "command": command
+    }
+
+@app.post("/commands/{command_id}/complete")
+def complete_command(command_id: int, result_id: int = None, status: str = "completed"):
+    """Marks a command as completed"""
+    result = database.update_command_status(command_id, status, result_id)
+    return {
+        "message": "Command updated",
+        "result": result
+    }
+    
+@app.get("/commands/pending/{device_id}")
+def get_pending_commands(device_id: str):
+    """ Agents checks for pending commands """
+    commands = database.get_pending_commands(device_id)
+    return {
+        "count": len(commands),
+        "commands": commands
+    }
+    
+@app.get("/commands")
+def get_all_commands(device_id: str = None, limit: int = 50):
+    """ Views all commands """
+    commands = database.get_all_commands(device_id, limit)
+    return{
+        "count": len(commands),
+        "commands": commands
+    }

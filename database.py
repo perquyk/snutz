@@ -51,7 +51,7 @@ def init_database():
             parameters TEXT,
             status TEXT DEFAULT 'pending',
             created_at TEXT NOT NULL,
-            completed_at TEXT NOT NULL,
+            completed_at TEXT,
             result_id INTEGER,
             FOREIGN KEY (device_id) REFERENCES devices (device_id),
             FOREIGN KEY (result_id) REFERENCES test_results (id)
@@ -99,6 +99,20 @@ def get_all_devices():
     
     conn.close()
     return devices
+   
+def get_device(device_id: str):
+    """ Gets ONE device from the database """   
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM devices WHERE device_id = ?", (device_id,))
+    row = cursor.fetchone()
+   
+    conn.close()
+    
+    if row:
+        return dict(row)
+    else:
+        return None
    
 def update_heartbeat(device_id: str):
     """ Updates last_seen timestamp for a device """
@@ -258,7 +272,7 @@ def get_all_commands(device_id: str = None, limit: int = 50):
     else:
         cursor.execute("""
             SELECT * FROM commands
-            ORDER BY create_at DESC
+            ORDER BY created_at DESC
             LIMIT ?
         """, (limit,))
         

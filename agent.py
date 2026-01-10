@@ -5,68 +5,114 @@ from tests import ping_test
 
 # Configuration
 DEVICE_ID = "test-1"
-DEVICE_NAME = "Test"
+DEVICE_NAME = "Test Device"
 SERVER_URL = "http://0.0.0.0:8000"
-HEARTBEAT_INTERVAL = 30 # SECONDS
-TEST_INTERVAL = 60
+HEARTBEAT_INTERVAL = 30
+CHECK_COMMANDS_INTERVAL = 10  # Check for commands every 10 seconds
 
-print(f"Starting agent: {DEVICE_ID} ({DEVICE_NAME})\nServer: {SERVER_URL}")
+print(f"Starting agent: {DEVICE_ID} ({DEVICE_NAME})")
+print(f"Server: {SERVER_URL}")
 
-# 1: Register with the server
+# Register with server
+print("\nRegistering with server...")
 response = requests.post(
     f"{SERVER_URL}/devices/register",
-    params={
-        "device_id": DEVICE_ID,
-        "name": DEVICE_NAME
-    }
+    params={"device_id": DEVICE_ID, "name": DEVICE_NAME}
 )
-print(f"Registration response: {response.json()}")
+print(f"Registered: {response.json()}")
 
-# 2: Keep running and send heartbeats back to server
-print(f"Sending hearbeat every {HEARTBEAT_INTERVAL}s...")
-print(f"Ping test every {TEST_INTERVAL}s...")
+# Main loop
+print(f"\nHeartbeat every {HEARTBEAT_INTERVAL}s")
+print(f"Checking for commands every {CHECK_COMMANDS_INTERVAL}s")
 print("Press CTRL+C to stop.\n")
 
 heartbeat_counter = 0
-test_counter = 0
+command_check_counter = 0
+
+def execute_command(command):
+    """Executes a command and returns the result"""
+    command_id = command["id"]
+    command_type = command["command_type"]
+    parameters = command.get("parameters")
+    
+    print(f"\nExecuting command #{command_id}: {command_type}")
+    
+    # Parse parameters if they exist
+    if parameters:
+        params = json.loads(parameters)
+    else:
+        params = {}
+    
+    # Execute based on command type
+    if command_type == "ping":
+        target = params.get("target", "google.com")
+        count = params.get("count", 4)
+        
+        print(f"   Pinging {target} ({count} packets)...")
+        result = ping_test(target, count)
+        
+        # Save result to server
+        response = requests.post(
+            f"{SERVER_URL}/tests/results",
+            params={
+                "device_id": DEVICE_ID,
+                "test_type": "ping",
+                "target": target,
+                "result_data": json.dumps(result),
+                "triggered_by": "command"
+            }
+        )
+        
+        if response.status_code == 200:
+            result_id = response.json()["result"]["id"]
+            
+            # Mark command as completed
+            requests.post(
+                f"{SERVER_URL}/commands/{command_id}/complete",
+                params={"result_id": result_id, "status": "completed"}
+            )
+            
+            if result["success"]:
+                print(f"   Command completed! Result ID: {result_id}")
+            else:
+                print(f"   Ping failed but result saved")
+        else:
+            print(f"   Failed to save result")
+    
+    else:
+        print(f"   Unknown command type: {command_type}")
+        # Mark as failed
+        requests.post(
+            f"{SERVER_URL}/commands/{command_id}/complete",
+            params={"status": "failed"}
+        )
 
 try:
     while True:
-        # Send heartbeat every set interval (set in HEARTBEAT_INTERVAL)
+        # Send heartbeat
         if heartbeat_counter >= HEARTBEAT_INTERVAL:
             response = requests.post(f"{SERVER_URL}/devices/{DEVICE_ID}/heartbeat")
             if response.status_code == 200:
-                print("Heartbeat sent")
+                print(f"Heartbeat sent")
             heartbeat_counter = 0
         
-        # Run ping test every set interval (set in TEST_INTERVAL)
-        if test_counter >= TEST_INTERVAL:
-            print("\nRunning ping test to google.com")
-            result = ping_test("google.com", count=4)
+        # Check for commands
+        if command_check_counter >= CHECK_COMMANDS_INTERVAL:
+            response = requests.get(f"{SERVER_URL}/commands/pending/{DEVICE_ID}")
             
-            #Send result to server
-            response = requests.post(
-                f"{SERVER_URL}/tests/results",
-                params={
-                    "device_id": DEVICE_ID,
-                    "test_type": "ping",
-                    "target": "google.com",
-                    "result_data": json.dumps(result),
-                    "triggered_by": "cron"
-                }
-            )
             if response.status_code == 200:
-                if result["success"]:
-                    print(f"[PING] - [SUCCESS] - Results saved to server")
-                else:
-                    print(f"[PING] - [FAILED] - {result.get('error', "Unknown error")}")
+                data = response.json()
+                if data["count"] > 0:
+                    print(f"\nFound {data['count']} pending command(s)")
+                    for command in data["commands"]:
+                        execute_command(command)
             
-            test_counter = 0
+            command_check_counter = 0
         
-        #wait 1 second
+        # Wait 1 second
         time.sleep(1)
         heartbeat_counter += 1
-        test_counter += 1
-            
+        command_check_counter += 1
+        
 except KeyboardInterrupt:
-    print("\n\n Agent stopped by user.")
+    print("\n\nAgent stopped")
