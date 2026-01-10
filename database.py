@@ -69,6 +69,30 @@ def get_all_devices():
     conn.close()
     return devices
    
+def update_heartbeat(device_id: str):
+    """ Updates last_seen timestamp for a device """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    
+    # UPDATE timestamp and status online
+    cursor.execute("""
+        UPDATE devices
+        SET LAST_SEEN = ?, status = 'online'
+        WHERE device_id = ?               
+    """, (now, device_id))
+    
+    if cursor.rowcount == 0:
+        conn.close()
+        return None # no device found
+    
+    conn.commit()
+    conn.close()
+    
+    return {"last_seen": now, "status": "online"}
+        
+    
 #Test code
 if __name__ == "__main__":
     print("Testing DB..")
