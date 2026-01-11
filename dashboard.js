@@ -97,7 +97,7 @@ async function runCommand() {
         alert("Please select a device!")
         return
     }
-    if(testType === 'ping' && !target){
+    if((testType === 'ping' || testType == 'traceroute') && !target){
         alert("Please enter a target!")
         return
     }
@@ -112,6 +112,12 @@ async function runCommand() {
         }
         else if (testType === 'speedtest') {
             parameters = JSON.stringify({})
+        }
+        else if (testType === 'traceroute'){
+            parameters = JSON.stringify({
+                target: target,
+                max_hops: 30
+            })
         }
 
         //Build the URL with query parameters

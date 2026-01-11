@@ -117,3 +117,85 @@ def speedtest_test():
             "error": str(e)
         }
         
+def traceroute_test(target: str, max_hops: int = 30):
+    """
+    Runs a traceroute to show the netowrk path to a target
+    
+    Params:
+    - target: What to trace (e.g., "google.com", "8.8.8.8")
+    - max_hops: maximum number of hops to trace (defualt 30)
+    
+    Returns: Dict w/ results
+    """
+    # Different OS use different traceroute commands
+    # Linux: traceroute
+    # windows: tracert
+    # mac: traceroute
+    
+    import platform
+    import subprocess
+    
+    system = platform.system().lower()
+    
+    if system == "windows":
+        command = ["tracert", "-h", str(max_hops), target]
+    else:
+        command = ["traceroute", "-m", str(max_hops), target]
+        
+    print(f"Running: {' '.join(command)}")
+    
+    try:
+        #Run the traceroute command
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=60 #traceroute can take a while
+        )
+        
+        output = result.stdout
+        
+        #Check if successful
+        success = result.returncode == 0
+        
+        #Parse the output into hops
+        hops = []
+        lines = output.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('traceroute') or line.startswith("Tracing"):
+                continue
+            
+            #This is basic parser - captures the lines
+            #Will parse moe thoroughly later
+            ## TODO ##
+            if line:
+                hops.append(line)
+        return {
+            "success": success,
+            "target": target,
+            "max_hops": max_hops,
+            "hops": hops,
+            "hop_count": len(hops),
+            "output": output
+        }
+        
+    except subprocess.TimeoutExpired:
+        return{
+            success: False,
+            "target": target,
+            "error": "Traceroute times out (60s)"
+        }
+    except FileNotFoundError:
+        return {
+            "success": False,
+            "target": target,
+            "error": "Traceroute command not found. is it installed?"
+        }
+    except Exception as e:
+        return {
+            "succes": False,
+            "target": target,
+            "error": str(e)
+        }

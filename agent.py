@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-from tests import ping_test, speedtest_test
+from tests import ping_test, speedtest_test, traceroute_test
 
 # Configuration
 DEVICE_ID = "test-1"
@@ -109,6 +109,41 @@ def execute_command(command):
             print(f"Ping: {result['ping_ms']} ms")
         else:
             print(f"Speedtest FAILED: {result.get('error')}")
+    
+    elif command_type == "traceroute":
+        target = params.get("target", "google.com")
+        max_hops = params.get("max_hops", 30)
+        
+        print(f"Tracing route to {target} (max {max_hops} hops)...")
+        result = traceroute_test(target, max_hops)
+        
+        #Save result to server
+        response = requests.post(f"{SERVER_URL}/tests/results",
+            params={
+                "device_id": DEVICE_ID,
+                "test_type": "traceroute",
+                "target": target,
+                "result_data": json.dumps(result),
+                "triggered_by": "command"
+            }
+        )
+        
+        if response.status_code == 200:
+            result_id = response.json()["result"]["id"]
+            
+            requests.post(
+                f"{SERVER_URL}/commands/{command_id}/complete",
+                params={"result_id": result_id, "status": "completed"}
+            )
+            
+            if result["success"]:
+                print(f"Traceroute completed")
+                print(f"hops: {result['hop_count']}")
+                print(f"Reuslt ID: {result_id}")
+            else:
+                print(f"Traceroute FAILED: {result.get('error')}")
+        else:
+            print("Failed to save result")
     
     else:
         print(f"   Unknown command type: {command_type}")
