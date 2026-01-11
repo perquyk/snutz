@@ -58,6 +58,23 @@ def init_database():
         )               
     """)
     
+    # COMMAND SCHEDULE TABLE
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            test_type TEXT NOT NULL,
+            target TEXT,
+            interval_seconds INTEGER NOT NULL,
+            enabled INTERGER DEFAULT 1,
+            parameters TEXT,
+            last_run TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (device_id) REFERENCES devices (device_id)
+        )    
+    """)
+    
+    
     conn.commit()
     conn.close()
     print("Database Initialized")
@@ -282,6 +299,160 @@ def get_all_commands(device_id: str = None, limit: int = 50):
     conn.close()
     return commands
          
+def create_schedule(device_id: str, test_type: str, interval_seconds: int,
+                    target: str = None, parameters: str = None):
+    """
+    Crates a new test schedule.
+    
+    Params:
+    - device_id: which device should run this
+    - test_type: "ping", "speedtest", "traceroute",...
+    - interval_seconds: Hopw often to run in seconds (e.g. 3600 = every hour)
+    - target: OPTIONAL target (for ping, traceroute)
+    - parameters: OPTIONAL JSON parameters
+    """
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    
+    cursor.execute("""
+        INSERT INTO schedules
+        (device_id, test_type, target, interval_seconds, parameters, enabled, created_at)        
+        VALUES (?,?,?,?,?,1,?)       
+    """, (device_id, test_type, target, interval_seconds, parameters, now))
+
+    schedule_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return{
+        "id": schedule_id,
+        "device_id": device_id,
+        "test_type": test_type,
+        "interval_seconds": interval_seconds,
+        "enabled": True
+    }
+
+def get_schedules(device_id: str = None, enabled_only: bool = False):
+    """
+    Gets schedules from the databse.
+    
+    Params:
+    - device_id: OPTIONAL - filter by device
+    - enabled_only: If true, only return enabled schedules
+    """
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    query = "SELECT * FROM schedules WHERE 1=1"
+    params = []
+    
+    if device_id:
+        query += " AND device_id = ?"
+        params.append(device_id)
+        
+    if enabled_only:
+        query += " AND enabled = 1"
+    
+    query += " ORDER BY created_at DESC"
+    
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    schedules = [dict(row) for row in rows]
+    
+    conn.close()
+    return schedules
+
+def get_schedules_due_to_run(device_id: str):
+    """
+    Get schedules that are due to run for a specific device
+    
+    A schedule is due if:
+    - It's enabled
+    - last_run is NULL (never run), OR
+    - Time since last_run >= interval_seconds
+    """    
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now()
+    
+    cursor.execute("""
+        SELECT * FROM devices
+        WHERE device_id = ? AND enabled = 1
+    """, (device_id))
+    
+    rows = cursor.fetchall()
+    due_schedules=[]
+    
+    for row in rows: 
+        schedule = dict(row)
+        
+        #if never run, it's due
+        if not schedule['last_run']:
+            due_schedules.append(schedule)
+            continue
+    
+        # Check if enough time has passed
+        last_run = datetime.fromisformat(schedule['last_run'])
+        seconds_since_run = (now - last_run).total_seconds()
+        
+        if seconds_since_run >= schedule['interval_seconds']:
+            due_schedules.append(schedule)
+            
+    conn.close()
+    return due_schedules
+
+def update_schedule_last_run(schedule_id: int):
+    """Updates the last_run timestamp for a schedule"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    now = datetime.now().isoformat()
+    
+    cursor.execute("""
+        UPDATE schedules
+        SET last_run = ?
+        WHERE id = ?               
+    """, (now, schedule_id))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"schedule_id": schedule_id, "last_run": now}
+    
+def toggle_schedule(schedule_id: int, enabled: bool):
+    """Enable or disbaled a schedule"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE schedules
+        set enabled = ?
+        WHERE id = ?
+    """, (1 if enabled else 0, schedule_id))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"schedule_id": schedule_id, "enabled": enabled}
+
+def delete_schedule(schedule_id: int):
+    """Deletes a schedule"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM schedules WHERE id = ?", (schedule_id,))
+    
+    conn.commit()
+    conn.close()
+    
+    return {"schedule_id": schedule_id, "deleted": True}
+
 # TEST CODE
 if __name__ == "__main__":
     print("Testing DB..")
