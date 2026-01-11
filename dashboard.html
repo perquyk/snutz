@@ -12,28 +12,9 @@
 
     <div class="card" id="registeredDevices">
         <h2>Registered Devices</h2>
-        <table>
-            <tr>
-                <th>Device ID</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Last Seen</th>
-            </tr>
-            <tr>
-                <td>test-1</td>
-                <td>Test Device</td>
-                <td class="status-online">Online</td>
-                <td>5 seconds ago</td>
-            </tr>
-            <tr>
-                <td>test-2</td>
-                <td>device 2</td>
-                <td class="status-offline">Offline</td>
-                <td>10 minutes ago</td>
-            </tr>
-        </table>
+        <p>No devices known yet...</p>
     </div>
-    <div class="card">
+    <div class="card" id="registered-devices">
         <h2>Run Command</h2>
         
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px;">
@@ -68,6 +49,10 @@
                 </button>
             </div>
         </div>
+    </div>
+    <div class="card" id="test-results">
+        <h2>Test Results</h2>
+        <p>No test results to show...</p>
     </div>
 
     <script src="dashboard.js"></script>
