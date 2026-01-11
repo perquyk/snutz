@@ -119,3 +119,64 @@ def get_all_commands(device_id: str = None, limit: int = 50):
         "count": len(commands),
         "commands": commands
     }
+    
+@app.post("/schedules/create")
+def create_schedule(
+    device_id: str,
+    test_type: str,
+    interval_seconds: int,
+    target: str = None,
+    parameters: str = None
+):
+    """Creates a new test schedule"""
+    #validate that device exists
+    device = database.get_device(device_id)
+    if not device:
+        return {"error": "device not found"}, 404
+    
+    schedule = database.create_schedule(
+        device_id, test_type, interval_seconds, target, parameters
+    )
+    
+    return {
+        "message": "Schedule Created",
+        "schedule": schedule
+    }
+    
+@app.get("/schedules")
+def get_schedules(device_id: str = None, enabled_only: bool = False):
+    """ Gets all schedules (optionally filtered) """
+    schedules = database.get_schedules(device_id, enabled_only)
+    return {
+        "count": len(schedules),
+        "schedules": schedules
+    }
+    
+@app.get("schedules/due/{device_id}")
+def get_due_schedules(device_id: str):
+    """Gets schedules that are due to run for this device"""
+    schedules = database.get_schedules_due_to_run(device_id)
+    return {
+        "count": len(schedules),
+        "schedules": schedules
+    }
+    
+@app.post("/schedules/{schedule_id}/toggle")
+def toggle_schedule(schedule_id: int, enabled: bool):
+    """Enabled/Disable a schedule"""
+    result = database.toggle_schedule(schedule_id, enabled)
+    return {
+        "message": "Schedule updated",
+        "result": result
+    }
+
+@app.delete("/schedules/{schedule_id}")
+def delete_schedule(schedule_id: int):
+    """Deletes a schedule"""
+    result = database.delete_schedule(schedule_id)
+    return {
+        "message": "Schedule deleted",
+        "result": result
+    }
+    
+    
