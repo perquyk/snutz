@@ -152,7 +152,7 @@ def get_schedules(device_id: str = None, enabled_only: bool = False):
         "schedules": schedules
     }
     
-@app.get("schedules/due/{device_id}")
+@app.get("/schedules/due/{device_id}")
 def get_due_schedules(device_id: str):
     """Gets schedules that are due to run for this device"""
     schedules = database.get_schedules_due_to_run(device_id)
@@ -168,6 +168,16 @@ def toggle_schedule(schedule_id: int, enabled: bool):
     return {
         "message": "Schedule updated",
         "result": result
+    }
+    
+@app.post("/schedules/{schedule_id}/ran")
+def mark_schedule_ran(schedule_id: int):
+    """Marks that a schedule just ran"""
+    result = database.update_schedule_last_run(schedule_id)
+    return {
+        "message": "Schedule updated",
+        "result": result
+        
     }
 
 @app.delete("/schedules/{schedule_id}")

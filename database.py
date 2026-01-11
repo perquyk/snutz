@@ -382,9 +382,9 @@ def get_schedules_due_to_run(device_id: str):
     now = datetime.now()
     
     cursor.execute("""
-        SELECT * FROM devices
+        SELECT * FROM schedules
         WHERE device_id = ? AND enabled = 1
-    """, (device_id))
+    """, (device_id,))
     
     rows = cursor.fetchall()
     due_schedules=[]
@@ -398,7 +398,7 @@ def get_schedules_due_to_run(device_id: str):
             continue
     
         # Check if enough time has passed
-        last_run = datetime.fromisformat(schedule['last_run'])
+        last_run = datetime.fromisoformat(schedule['last_run'])
         seconds_since_run = (now - last_run).total_seconds()
         
         if seconds_since_run >= schedule['interval_seconds']:
