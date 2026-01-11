@@ -68,3 +68,52 @@ def ping_test(target:str, count: int=4):
             "target": target,
             "error": str(e)
         }
+        
+def speedtest_test():
+    """
+    Runs a speedtest to measure internet speed
+    Returns: dict w/ result
+    """
+    
+    print("Running speedtest..")
+    
+    try:
+        import speedtest
+        
+        # Create speedtest object
+        st = speedtest.Speedtest()
+        
+        # Find best server
+        print("Finding best server..")
+        st.get_best_server()
+        
+        #Get server info
+        server = st.results.server
+        
+        #test download speed
+        print("Testing DOWNLOAD speed...")
+        download_bps = st.download()
+        download_mbps = download_bps / 1_000_000
+        
+        #Test upload speed
+        print("Testing UPLOAD speed...")
+        upload_bps = st.upload()
+        upload_mbps = upload_bps / 1_000_000
+        
+        #Get Ping
+        ping = st.results.ping
+        
+        return{
+            "success": True,
+            "download_mbps": round(download_mbps, 2),
+            "upload_mbps": round(upload_mbps, 2),
+            "ping_ms": round(ping, 2),
+            "server_name": server.get("sponsor", "Unkown"),
+            "server_location": f"{server.get('name', "Unknown")}, {server.get("country", "Unkown")}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+        

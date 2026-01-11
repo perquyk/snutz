@@ -97,17 +97,22 @@ async function runCommand() {
         alert("Please select a device!")
         return
     }
-    if(!target){
+    if(testType === 'ping' && !target){
         alert("Please enter a target!")
         return
     }
     
     try {
         //Create the parameters object
+        if(testType === 'ping'){
         const parameters = JSON.stringify({
             target: target,
             count: 4
         })
+        }
+        else if (testType === 'speedtest') {
+            parameters = JSON.stringify({})
+        }
 
         //Build the URL with query parameters
         const url = `${API_URL}/commands/create?device_id=${deviceId}&command_type=${testType}&parameters=${encodeURIComponent(parameters)}`

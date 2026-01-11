@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-from tests import ping_test
+from tests import ping_test, speedtest_test
 
 # Configuration
 DEVICE_ID = "test-1"
@@ -78,6 +78,37 @@ def execute_command(command):
                 print(f"   Ping failed but result saved")
         else:
             print(f"   Failed to save result")
+    
+    elif command_type == "speedtest":
+      print("Running speedtest (This takes 30-60 secs)")
+      result = speedtest_test()
+      
+      #Save result to server
+      response = requests.post(
+          f"{SERVER_URL}/tests/results",
+          params={
+              "device_id": DEVICE_ID,
+              "test_type": "speedtest",
+              "target": result.get("server_location", "N.A"),
+              "result_data": json.dumps(result),
+              "triggered_by": "command"
+          }
+      )
+      
+      if response.status_code == 200:
+        result_id = response.json()["result"]["id"]
+          
+        requests.post(f"{SERVER_URL}/commands/{command_id}/complete",
+                    params={"result_id": result_id, "status": "completed"}
+        )
+        
+        if result["success"]:
+            print(f"Speedtest Completed!")
+            print(f"Download: {result['download_mbps']} Mbps")
+            print(f"Upload: {result['upload_mbps']} Mbps")
+            print(f"Ping: {result['ping_ms']} ms")
+        else:
+            print(f"Speedtest FAILED: {result.get('error')}")
     
     else:
         print(f"   Unknown command type: {command_type}")
